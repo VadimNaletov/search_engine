@@ -3,10 +3,13 @@ package searchengine.controllers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.search.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
 import searchengine.services.ResponseService;
+import searchengine.services.SearchService;
 import searchengine.services.StatisticsService;
 
 @RestController
@@ -16,6 +19,7 @@ public class ApiController {
 
     private final StatisticsService statisticsService;
     private final IndexingService indexingService;
+    private final SearchService searchService;
 
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() {
@@ -44,5 +48,11 @@ public class ApiController {
                     .body("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
         }
         return ResponseEntity.ok(responseService);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<SearchResponse> search(String query, @Nullable String url, int offset, int limit){
+        SearchResponse searchResponse = searchService.getSearchData(query, url, offset, limit);
+        return ResponseEntity.ok(searchResponse);
     }
 }

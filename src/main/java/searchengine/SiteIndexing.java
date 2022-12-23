@@ -56,8 +56,8 @@ public class SiteIndexing extends Thread{
             pageRepository.save(pageEntity);
             LemmaFinder lemmaFinder = LemmaFinder.getInstance();
             Map<String, Integer> lemmas = lemmaFinder.collectLemmas(url);
-            saveLemmasToDB(lemmas, siteEntity.getId());
-            saveIndexToDB(lemmas, pageEntity.getId());
+            float lemmasSum = saveLemmasToDB(lemmas, siteEntity.getId());
+            saveIndexToDB(lemmas, pageEntity.getId(), lemmasSum);
         } catch (IOException e) {
             siteEntity.setLastError("Ошибка чтения страницы: " + url);
             siteEntity.setStatus(StatusType.FAILED);
@@ -106,8 +106,10 @@ public class SiteIndexing extends Thread{
         }
         return pageEntity;
     }
-    private void saveLemmasToDB(Map<String, Integer> lemmas, long siteId){
+    private float saveLemmasToDB(Map<String, Integer> lemmas, long siteId){
+        float sum = 0;
         for(Map.Entry<String, Integer> lemma : lemmas.entrySet()){
+            sum = sum + lemma.getValue();
             LemmaEntity lemmaEntity = lemmaRepository.findByLemma(lemma.getKey());
             if(lemmaEntity == null){
                 lemmaEntity = new LemmaEntity();
@@ -117,13 +119,17 @@ public class SiteIndexing extends Thread{
             lemmaEntity.setSiteId(siteId);
             lemmaRepository.save(lemmaEntity);
         }
+        return sum;
     }
-    private void saveIndexToDB(Map<String, Integer> lemmas, long pageId){
+    private void saveIndexToDB(Map<String, Integer> lemmas, long pageId, float lemmasSum){
         for(Map.Entry<String, Integer> lemma : lemmas.entrySet()){
             LemmaEntity lemmaEntity = lemmaRepository.findByLemma(lemma.getKey());
-            IndexEntity indexEntity = new IndexEntity();
+            IndexEntity indexEntity = indexRepository.findIndexByLemmaId(lemmaEntity.getId());
+            if(indexEntity == null){
+                indexEntity = new IndexEntity();
+            }
             indexEntity.setPageId(pageId);
-            indexEntity.setRank((float) lemma.getValue());
+            indexEntity.setRank((lemma.getValue() / lemmasSum) * 100);
             indexEntity.setLemmaId(lemmaEntity.getId());
             indexRepository.save(indexEntity);
         }
