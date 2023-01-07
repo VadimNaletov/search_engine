@@ -4,6 +4,8 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 import searchengine.dto.search.DetailedSearchData;
 import searchengine.dto.search.SearchData;
@@ -18,6 +20,9 @@ import searchengine.repositories.SiteRepository;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 @Component
 @RequiredArgsConstructor
 public class Searching {
@@ -30,6 +35,7 @@ public class Searching {
     List<DetailedSearchData> detailedSearchDataList = new ArrayList<>();
 
     public SearchData getSearchData(String query, String url, int offset, int limit) throws IOException {
+        query = query.toLowerCase();
         List<SiteEntity> siteList = siteRepository.findAll();
         if(url == null){
             for(SiteEntity siteEntity : siteList){
@@ -113,10 +119,19 @@ public class Searching {
     private List<String> getRequiredLemma(String query){
         List<String> requestLemmas = new ArrayList<>();
         try {
-            LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
+            LuceneMorphology russianLuceneMorphology = new RussianLuceneMorphology();
             String[] queryWords = query.split("\\s+");
             for (String word : queryWords) {
-                List<String> normalWord = luceneMorphology.getNormalForms(word);
+                word = word.toLowerCase();
+                Pattern pattern = Pattern.compile("а-яё");
+                Matcher matcher = pattern.matcher(word);
+                List<String> normalWord;
+                if(matcher.matches()) {
+                    normalWord = russianLuceneMorphology.getNormalForms(word);
+                } else {
+                    normalWord = new ArrayList<>();
+                    normalWord.add(word);
+                }
                 requestLemmas.add(normalWord.get(0));
             }
         } catch (Exception ex){
@@ -159,23 +174,50 @@ public class Searching {
         return detailedSearchData;
     }
     private String getSnipped(String content, String query){
-        List<String> queryWords = getRequiredLemma(query);
-        Document html = Jsoup.parse(content);
-        String body = html.body().text();
-        List<String> contentWords = getRequiredLemma(body);
-        String[] textArgs = query.split("\\s+");
-        String[] contentWordsArgs = new String[contentWords.size()];
-        for(int i = 0; i < contentWords.size(); i++){
-            contentWordsArgs[i] = contentWords.get(i);
+        StringBuilder snipped = new StringBuilder();
+
+        Document document = Jsoup.parse(content);
+        Elements elements = document.children();
+        List<String> contentWords = new ArrayList<>();
+        List<String> lemmaContentWords = new ArrayList<>();
+        for(Element element : elements){
+            String[] words = element.text().split("\\s+");
+            for(String word : words){
+                contentWords.add(word);
+                word = word.replaceAll("\\p{Punct}", "").toLowerCase();
+                List<String> lemmaContentWord = getRequiredLemma(word);
+                lemmaContentWords.add(lemmaContentWord.get(0));
+            }
         }
-        for(String word : textArgs){
-            for(int i = 0; i < queryWords.size(); i++){
-                if(queryWords.get(i).equals(word) || contentWordsArgs[i].equals(word)){
-                    word = word.replaceAll(word, "<b>" + word + "</b>");
+        String[] queryArgs = query.replaceAll("\\p{Punct}", "").toLowerCase().split("\\s+");
+        List<String> lemmaQueryWords = new ArrayList<>();
+        for (String word : queryArgs){
+            List<String> lemmaQueryWord = getRequiredLemma(word);
+            lemmaQueryWords.add(lemmaQueryWord.get(0));
+        }
+
+        int start = 0;
+        int finish = 0;
+        for(String word : lemmaQueryWords){
+            for(int i = 0; i < lemmaContentWords.size(); i++){
+                if(lemmaContentWords.get(i).equals(word)){
+                    word = word.replaceAll(word, "<b>" + contentWords.get(i) + "</b>");
+                    contentWords.remove(i);
+                    contentWords.add(i, word);
+                    if (i > 10){
+                        start = i - 10;
+                        finish = i + 20;
+                    }
                 }
             }
         }
-        return Arrays.toString(textArgs);
+        if(finish == 0) return "";
+        if(finish > contentWords.size()) finish = contentWords.size();
+
+        for (int i = start; i < finish; i++){
+            snipped.append(contentWords.get(i)).append(" ");
+        }
+        return snipped.toString();
     }
     private void fillInDetailedSearchDataList(String query, long siteId){
         Map<PageEntity, Float> relevantData = getRelevantData(query, siteId);

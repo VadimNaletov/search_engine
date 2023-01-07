@@ -73,7 +73,7 @@ public class LemmaFinder {
         return false;
     }
     public String htmlToText(String url) {
-        Connection.Response body;
+        Connection.Response body = null;
         try {
             body = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
@@ -81,8 +81,8 @@ public class LemmaFinder {
                     .timeout(5000)
                     .maxBodySize(0)
                     .execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
         String html = body.body();
         StringBuilder text = new StringBuilder();

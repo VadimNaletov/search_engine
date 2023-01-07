@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
     @Query(value = "SELECT COUNT(page_id) FROM search_engine.index_table where lemma_id = :lemmaId", nativeQuery = true)
     int countFrequencyByLemmaId(long lemmaId);
-    @Query(value = "SELECT * FROM search_engine.index_table where (:lemmaId IS NULL or lemma_id = :lemma_id)", nativeQuery = true)
+    @Query(value = "SELECT * FROM search_engine.index_table where (:lemmaId IS NULL or lemma_id = :lemmaId) limit 1", nativeQuery = true)
     IndexEntity findIndexByLemmaId(long lemmaId);
     @Query(value = "SELECT * FROM search_engine.index_table where (:lemmaId IS NULL or lemma_id = :lemmaId)", nativeQuery = true)
     List<IndexEntity> getAllIndexesByLemmaId(long lemmaId);

@@ -7,6 +7,7 @@ import searchengine.Searching;
 import searchengine.dto.search.SearchResponse;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -15,7 +16,7 @@ public class SearchServiceImpl implements SearchService{
     @Override
     public SearchResponse getSearchData(String query, @Nullable String url, int offset, int limit) {
         SearchResponse searchResponse = new SearchResponse();
-        if(query.equals("")){
+        if(Objects.equals(query, "")){
             searchResponse.setResult(false);
             searchResponse.setError("Задан пустой поисковый запрос");
         } else if(url == null){
