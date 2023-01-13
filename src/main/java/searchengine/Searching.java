@@ -4,8 +4,6 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 import searchengine.dto.search.DetailedSearchData;
 import searchengine.dto.search.SearchData;
@@ -31,7 +29,6 @@ public class Searching {
     private final PageRepository pageRepository;
     private final SiteRepository siteRepository;
     SearchData searchData = new SearchData();
-
     List<DetailedSearchData> detailedSearchDataList = new ArrayList<>();
 
     public SearchData getSearchData(String query, String url, int offset, int limit) throws IOException {
@@ -164,60 +161,52 @@ public class Searching {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            detailedSearchData.setTitle(document.title());
+            if (document != null) {
+                detailedSearchData.setTitle(document.title());
+            }
             detailedSearchData.setUri(pageEntity.getPath());
             detailedSearchData.setRelevance(data.getValue());
             detailedSearchData.setSiteName(siteEntity.getName());
             detailedSearchData.setSite(siteEntity.getUrl());
-            detailedSearchData.setSnippet(getSnipped(pageEntity.getContent(), query));
+            try {
+                detailedSearchData.setSnippet(getSnipped(pageEntity.getContent(), query));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
         return detailedSearchData;
     }
-    private String getSnipped(String content, String query){
-        StringBuilder snipped = new StringBuilder();
-
-        Document document = Jsoup.parse(content);
-        Elements elements = document.children();
-        List<String> contentWords = new ArrayList<>();
-        List<String> lemmaContentWords = new ArrayList<>();
-        for(Element element : elements){
-            String[] words = element.text().split("\\s+");
-            for(String word : words){
-                contentWords.add(word);
-                word = word.replaceAll("\\p{Punct}", "").toLowerCase();
-                List<String> lemmaContentWord = getRequiredLemma(word);
-                lemmaContentWords.add(lemmaContentWord.get(0));
-            }
+    private String getSnipped (String html, String request) throws IOException {
+        LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
+        String text = Jsoup.parse(html).text();
+        String[] requestWords = request.split("\\s+");
+        List<String> requestLemmas = new ArrayList<>();
+        for(String req : requestWords){
+            List<String> reqLemmas = luceneMorphology.getNormalForms(req);
+            requestLemmas.add(reqLemmas.get(0));
         }
-        String[] queryArgs = query.replaceAll("\\p{Punct}", "").toLowerCase().split("\\s+");
-        List<String> lemmaQueryWords = new ArrayList<>();
-        for (String word : queryArgs){
-            List<String> lemmaQueryWord = getRequiredLemma(word);
-            lemmaQueryWords.add(lemmaQueryWord.get(0));
-        }
-
-        int start = 0;
-        int finish = 0;
-        for(String word : lemmaQueryWords){
-            for(int i = 0; i < lemmaContentWords.size(); i++){
-                if(lemmaContentWords.get(i).equals(word)){
-                    word = word.replaceAll(word, "<b>" + contentWords.get(i) + "</b>");
-                    contentWords.remove(i);
-                    contentWords.add(i, word);
-                    if (i > 10){
-                        start = i - 10;
-                        finish = i + 20;
-                    }
+        String[] textWords = text.split("—|\\p{Punct}|\\s");
+        StringBuilder builder = new StringBuilder();
+        for (String textWord : textWords) {
+            try {
+                if (requestLemmas.contains(luceneMorphology.getNormalForms(textWord.toLowerCase()).get(0))) {
+                    builder.append("<b>").append(textWord).append("</b> ");
+                } else {
+                    builder.append(textWord).append(" ");
                 }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         }
-        if(finish == 0) return "";
-        if(finish > contentWords.size()) finish = contentWords.size();
-
-        for (int i = start; i < finish; i++){
-            snipped.append(contentWords.get(i)).append(" ");
+        String preResult =
+                builder.substring(Math.max(builder.indexOf("<b>") - 100, 0),
+                        Math.min(builder.indexOf("</b>") + 100, builder.length()));
+        String result = preResult.substring(preResult.indexOf(" "));
+        while(!result.endsWith(" ")){
+            result = result.substring(0, result.length() - 1);
         }
-        return snipped.toString();
+        result = result.substring(1, result.length() - 1);
+        return result;
     }
     private void fillInDetailedSearchDataList(String query, long siteId){
         Map<PageEntity, Float> relevantData = getRelevantData(query, siteId);

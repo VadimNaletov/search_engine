@@ -84,7 +84,10 @@ public class LemmaFinder {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        String html = body.body();
+        String html = "";
+        if (body != null) {
+            html = body.body();
+        }
         StringBuilder text = new StringBuilder();
         Document document = Jsoup.parse(html);
         Elements elements = document.children();
