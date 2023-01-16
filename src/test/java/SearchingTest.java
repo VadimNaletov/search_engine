@@ -1,11 +1,14 @@
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import searchengine.Searching;
 import searchengine.dto.search.SearchData;
 import searchengine.model.LemmaEntity;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
@@ -13,10 +16,12 @@ import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SearchingTest {
@@ -35,23 +40,48 @@ public class SearchingTest {
 
     @Test
     public void testGetSearchData() throws IOException {
-        // given
-        String query = "test";
-        String url = "www.test.com";
-        int offset = 0;
-        int limit = 10;
-        SiteEntity siteEntity = new SiteEntity();
-        siteEntity.setId(1L);
-        siteEntity.setUrl("www.test.com");
-        when(siteRepository.findAll()).thenReturn(Collections.singletonList(siteEntity));
-        when(siteRepository.findByUrl("test.com")).thenReturn(siteEntity);
-        LemmaEntity lemmaEntity = new LemmaEntity();
-        lemmaEntity.setId(1L);
-        lemmaEntity.setLemma("test");
-        lemmaEntity.setFrequency(1);
-        lemmaEntity.setSiteId(1L);
-        SearchData searchData = searching.getSearchData(query, url, offset, limit);
-        assertEquals(0, searchData.getCount());
-        assertEquals(Collections.emptyList(), searchData.getDetailedSearchData());
+        when(siteRepository.findAll()).thenReturn(new ArrayList<>());
+        when(siteRepository.findByUrl("example.com")).thenReturn(new SiteEntity());
+        Mockito.lenient().when(lemmaRepository.findByLemma("тест")).thenReturn(new LemmaEntity());
+        Mockito.lenient().when(indexRepository.getAllIndexesByLemmaId(1)).thenReturn(new ArrayList<>());
+        Mockito.lenient().when(pageRepository.findById(1L)).thenReturn(Optional.of(new PageEntity()));
+        SearchData result = searching.getSearchData("тест", "example.com", 0, 1);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(0, result.getCount());
+        verify(siteRepository, times(1)).findAll();
+        verify(siteRepository, times(1)).findByUrl("example.com");
+    }
+    @Test
+    public void testGetSearchData_withUrl() throws IOException {
+        //arrange
+        when(siteRepository.findByUrl("example.com")).thenReturn(new SiteEntity());
+        Mockito.lenient().when(lemmaRepository.findByLemma("тест")).thenReturn(new LemmaEntity());
+        Mockito.lenient().when(indexRepository.getAllIndexesByLemmaId(1)).thenReturn(new ArrayList<>());
+        Mockito.lenient().when(pageRepository.findById(1L)).thenReturn(Optional.of(new PageEntity()));
+
+        //act
+        SearchData result = searching.getSearchData("тест", "example.com", 0, 1);
+
+        //assert
+        Assert.assertNotNull(result);
+        Assert.assertEquals(0, result.getCount());
+        verify(siteRepository, times(1)).findByUrl("example.com");
+    }
+
+    @Test
+    public void testGetSearchData_withLimitAndOffset() throws IOException {
+        //arrange
+        when(siteRepository.findAll()).thenReturn(new ArrayList<>());
+        Mockito.lenient().when(lemmaRepository.findByLemma("тест")).thenReturn(new LemmaEntity());
+        Mockito.lenient().when(indexRepository.getAllIndexesByLemmaId(1)).thenReturn(new ArrayList<>());
+        Mockito.lenient().when(pageRepository.findById(1L)).thenReturn(Optional.of(new PageEntity()));
+
+        //act
+        SearchData result = searching.getSearchData("тест", null, 1, 1);
+
+        //assert
+        Assert.assertNotNull(result);
+        Assert.assertEquals(0, result.getCount());
+        verify(siteRepository, times(1)).findAll();
     }
 }
