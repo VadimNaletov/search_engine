@@ -10,7 +10,6 @@ import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.SiteEntity;
 import searchengine.model.StatusType;
-import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
@@ -18,7 +17,6 @@ import searchengine.repositories.SiteRepository;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -39,13 +37,12 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
         List<Site> sitesList = sites.getSites();
-        for(int i = 0; i < sitesList.size(); i++) {
-            Site site = sitesList.get(i);
+        for (Site site : sitesList) {
             String url = site.getUrl();
-            if(url.contains("www.")) url = url.replaceAll("www.", "");
+            if (url.contains("www.")) url = url.replaceAll("www.", "");
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             SiteEntity siteEntity = siteRepository.findByUrl(url);
-            if(siteEntity == null){
+            if (siteEntity == null) {
                 siteEntity = new SiteEntity();
                 siteEntity.setUrl(url);
                 siteEntity.setName(site.getName());
