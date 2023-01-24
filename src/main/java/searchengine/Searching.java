@@ -33,73 +33,45 @@ public class Searching {
 
     public SearchData getSearchData(String query, String url, int offset, int limit) throws IOException {
         query = query.toLowerCase();
-        List<SiteEntity> siteList = siteRepository.findAll();
+        List<SiteEntity> siteList;
         if(url == null){
-            for(SiteEntity siteEntity : siteList){
-                fillInDetailedSearchDataList(query, siteEntity.getId());
-            }
+            siteList = siteRepository.findAll();
         } else {
-            if(url.contains("www.")){
-                url = url.replace("www.", "");
-            }
+            url = url.replace("www.", "");
             SiteEntity siteEntity = siteRepository.findByUrl(url);
+            siteList = new ArrayList<>(Collections.singletonList(siteEntity));
+        }
+
+        for (SiteEntity siteEntity : siteList){
             fillInDetailedSearchDataList(query, siteEntity.getId());
         }
+
         detailedSearchDataList.sort(Comparator.comparing(DetailedSearchData::getRelevance));
-        List<DetailedSearchData> result = new ArrayList<>();
-        int count = 0;
-        if (detailedSearchDataList.isEmpty()){
-            searchData.setCount(count);
-        }
-        if (limit + offset < detailedSearchDataList.size()) {
-            count = limit;
-        } else {
-            count = detailedSearchDataList.size() - offset;
-        }
-        if(offset == 0 && count == 0){
-            result = detailedSearchDataList;
-        } else {
-            for(int i = offset; i < count; i++){
-                result.add(i, detailedSearchDataList.get(i));
-            }
-        }
+
+        int count = Math.min(limit, detailedSearchDataList.size() - offset);
+        List<DetailedSearchData> result = detailedSearchDataList.subList(offset, offset + count);
         searchData.setDetailedSearchData(result);
         searchData.setCount(detailedSearchDataList.size());
         return searchData;
     }
+
     private Map<PageEntity, Float> getRelevantData(String query, long siteId){
         HashMap<PageEntity, Float> relevantPages = new HashMap<>();
         List<LemmaEntity> requiredLemmas = getSortedLemmas(query, siteId);
-        List<Long> pageIndexes = new ArrayList<>();
-        if(!requiredLemmas.isEmpty()) {
+        if(requiredLemmas.isEmpty()){
+            return relevantPages;
+        }
             List<IndexEntity> indexEntityList =
                     indexRepository.getAllIndexesByLemmaId(requiredLemmas.get(0).getId());
-            indexEntityList.forEach(indexEntity -> pageIndexes.add(indexEntity.getPageId()));
+        for (IndexEntity indexEntity : indexEntityList){
+            PageEntity pageEntity = pageRepository.findById(indexEntity.getPageId()).orElse(null);
+            float relevance = 0;
             for (LemmaEntity lemmaEntity : requiredLemmas) {
-                if (!pageIndexes.isEmpty() && lemmaEntity.getId() != requiredLemmas.get(0).getId()) {
-                    List<IndexEntity> leftIndexEntityList =
-                            indexRepository.getAllIndexesByLemmaId(lemmaEntity.getId());
-                    List<Long> requiredPageId = new ArrayList<>();
-                    leftIndexEntityList.forEach(indexEntity -> requiredPageId.add(indexEntity.getId()));
-                    pageIndexes.retainAll(requiredPageId);
-                }
+                relevance += indexRepository.countFrequencyByLemmaId(lemmaEntity.getId());
             }
-            Map<PageEntity, Float> pagesRelevance = new HashMap<>();
-            float maxRelevance = 0.0F;
-            for(Long pageId : pageIndexes){
-                Optional<PageEntity> pageEntityOptional = pageRepository.findById(pageId);
-                if(pageEntityOptional.isPresent()){
-                    PageEntity pageEntity = pageEntityOptional.get();
-                    float relevance = getRelevance(pageEntity, requiredLemmas);
-                    pagesRelevance.put(pageEntity, relevance);
-                    if (relevance > maxRelevance) maxRelevance = relevance;
-                }
+                relevantPages.put(pageEntity, relevance);
             }
-            for(Map.Entry<PageEntity, Float> pageRelevance : pagesRelevance.entrySet()){
-                relevantPages.put(pageRelevance.getKey(), pageRelevance.getValue() / maxRelevance);
-            }
-        }
-        return relevantPages;
+            return relevantPages;
     }
     private List<LemmaEntity> getSortedLemmas(String query, long siteId){
         List<LemmaEntity> lemmaEntityList = new ArrayList<>();
@@ -136,18 +108,7 @@ public class Searching {
         }
         return requestLemmas;
     }
-    private float getRelevance(PageEntity pageEntity, List<LemmaEntity> lemmaEntityList){
-        float relevance = 0.0F;
-        for(LemmaEntity lemmaEntity : lemmaEntityList){
-            Optional<IndexEntity> indexEntityOptional =
-                    indexRepository.findIndexByLemmaIdAndPageId(pageEntity.getId(), lemmaEntity.getId());
-            if(indexEntityOptional.isPresent()){
-                IndexEntity indexEntity = indexEntityOptional.get();
-                relevance += indexEntity.getRank();
-            }
-        }
-        return relevance;
-    }
+
     private DetailedSearchData getDetailedSearchData(Map.Entry<PageEntity, Float> data, String query){
         DetailedSearchData detailedSearchData = new DetailedSearchData();
         PageEntity pageEntity = data.getKey();
