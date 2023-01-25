@@ -1,11 +1,9 @@
 package searchengine;
 
-import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.model.SiteEntity;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -57,14 +55,8 @@ public class UrlParser extends RecursiveTask<String> {
                     result.append(text);
                 }
             }
-        } catch (HttpStatusException ex){
+        } catch (RuntimeException | IOException | InterruptedException ex){
             ex.printStackTrace();
-        } catch (RuntimeException ex) {
-            ex.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
         return result.toString();
     }
