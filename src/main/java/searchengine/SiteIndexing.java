@@ -14,8 +14,14 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @RequiredArgsConstructor
 public class SiteIndexing extends Thread{
+
+    private static final Logger logger = LogManager.getLogger(SiteIndexing.class);
 
     private final SiteEntity siteEntity;
     private final SiteRepository siteRepository;
@@ -61,9 +67,10 @@ public class SiteIndexing extends Thread{
         } catch (IOException e) {
             siteEntity.setLastError("Ошибка чтения страницы: " + url);
             siteEntity.setStatus(StatusType.FAILED);
-            e.printStackTrace();
+            logger.error("Error reading page: " + e.getMessage());
         } catch (DataIntegrityViolationException e){
             siteEntity.setLastError("Данные страницы " + url + " отсутствуют");
+            logger.error("Page's data is empty: " + e.getMessage());
         } finally {
             siteRepository.save(siteEntity);
         }
@@ -102,7 +109,7 @@ public class SiteIndexing extends Thread{
                 pageRepository.delete(check);
             }
         } catch (Exception ex){
-            ex.printStackTrace();
+            logger.error("Could not connect to " + url + " - " + ex.getMessage());
         }
         return pageEntity;
     }

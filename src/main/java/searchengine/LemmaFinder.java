@@ -14,7 +14,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class LemmaFinder {
+
+    private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
+
     private final LuceneMorphology luceneMorphology;
     private static final String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
     public LemmaFinder(LuceneMorphology luceneMorphology) {
@@ -23,9 +29,6 @@ public class LemmaFinder {
     public static LemmaFinder getInstance() throws IOException {
         LuceneMorphology morphology = new RussianLuceneMorphology();
         return new LemmaFinder(morphology);
-    }
-    private LemmaFinder(){
-        throw new RuntimeException("Disallow construct");
     }
 
     public Map<String, Integer> collectLemmas(String url){
@@ -82,7 +85,7 @@ public class LemmaFinder {
                     .maxBodySize(0)
                     .execute();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Could not connect to: " + url + " - " + ex.getMessage());
         }
         String html = "";
         if (body != null) {

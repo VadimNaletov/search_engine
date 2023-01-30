@@ -10,8 +10,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.RecursiveTask;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class UrlParser extends RecursiveTask<String> {
+
+    private static final Logger logger = LogManager.getLogger(UrlParser.class);
+
     public UrlParser(String url, boolean isInterrupted) {
         this.url = url;
         this.isInterrupted = isInterrupted;
@@ -56,7 +62,7 @@ public class UrlParser extends RecursiveTask<String> {
                 }
             }
         } catch (RuntimeException | IOException | InterruptedException ex){
-            ex.printStackTrace();
+            logger.error("Error while processing URL: " + url, ex);
         }
         return result.toString();
     }

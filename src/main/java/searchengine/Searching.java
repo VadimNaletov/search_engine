@@ -21,9 +21,15 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @Component
 @RequiredArgsConstructor
 public class Searching {
+
+    private static final Logger logger = LogManager.getLogger(Searching.class);
+
     private final IndexRepository indexRepository;
     private final LemmaRepository lemmaRepository;
     private final PageRepository pageRepository;
@@ -104,7 +110,7 @@ public class Searching {
                 requestLemmas.add(normalWord.get(0));
             }
         } catch (Exception ex){
-            ex.printStackTrace();
+            logger.info("Could not find request lemmas for: " + query + " - " + ex.getMessage());
         }
         return requestLemmas;
     }
@@ -120,7 +126,7 @@ public class Searching {
             try {
                 document = Jsoup.connect(url).get();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Could not connect to: " + url + " - " + e.getMessage());
             }
             if (document != null) {
                 detailedSearchData.setTitle(document.title());
@@ -156,7 +162,7 @@ public class Searching {
                     builder.append(textWord).append(" ");
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
+                logger.info("Could not find request lemmas for: " + textWord + " - " + ex.getMessage());
             }
         }
         String preResult =

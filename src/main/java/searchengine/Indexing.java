@@ -14,6 +14,7 @@ import searchengine.repositories.SiteRepository;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -103,7 +104,7 @@ public class Indexing {
                 status = siteEntity.getStatus();
             }
         }
-        if(site.isBlank() || status.equals(StatusType.INDEXING)){
+        if(site.isBlank() || Objects.equals(status, StatusType.INDEXING)){
             return false;
         } else {
             SiteEntity siteEntity = siteRepository.findByUrl(site);

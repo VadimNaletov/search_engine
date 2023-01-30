@@ -4,10 +4,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import searchengine.Indexing;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 @Service
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
+
+    private static final Logger logger = LogManager.getLogger(IndexingServiceImpl.class);
+
     private final Indexing indexing;
     @Override
     public ResponseService startIndexing() {
@@ -22,7 +28,7 @@ public class IndexingServiceImpl implements IndexingService {
             }
         } catch (InterruptedException e) {
             responseService = new FalseResponseService();
-            e.printStackTrace();
+            logger.error("Thread is interrupted - " + e.getMessage());
         }
         return responseService;
     }

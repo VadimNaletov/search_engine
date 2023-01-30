@@ -9,9 +9,15 @@ import searchengine.dto.search.SearchResponse;
 import java.io.IOException;
 import java.util.Objects;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @Service
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService{
+
+    private static final Logger logger = LogManager.getLogger(SearchServiceImpl.class);
+
     private final Searching searching;
     public SearchResponse getSearchData(String query, @Nullable String url, int offset, int limit) {
         SearchResponse searchResponse = new SearchResponse();
@@ -43,6 +49,7 @@ public class SearchServiceImpl implements SearchService{
             searchResponse.setSearchData(searching.getSearchData(query, null, offset, limit));
         } catch (IOException e) {
             setErrorInSearchResponse(searchResponse);
+            logger.error("Could not get SearchData - " + e.getMessage());
         }
         searchResponse.setResult(true);
     }
@@ -52,6 +59,7 @@ public class SearchServiceImpl implements SearchService{
             searchResponse.setSearchData(searching.getSearchData(query, url, offset, limit));
         } catch (IOException e) {
             setErrorInSearchResponse(searchResponse);
+            logger.error("Could not get SearchData - " + e.getMessage());
         }
     }
 
