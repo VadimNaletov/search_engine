@@ -1,7 +1,7 @@
 package searchengine.services;
 
 public interface IndexingService {
-    ResponseService startIndexing();
-    ResponseService stopIndexing();
-    ResponseService indexPage(String url);
+    boolean startIndexing();
+    boolean stopIndexing();
+    boolean indexPage(String url);
 }

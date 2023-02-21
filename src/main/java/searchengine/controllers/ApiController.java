@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import searchengine.dto.search.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
-import searchengine.services.ResponseService;
 import searchengine.services.SearchService;
 import searchengine.services.StatisticsService;
 
@@ -28,26 +27,26 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<Object> startIndexing(){
-        ResponseService responseService = indexingService.startIndexing();
-        return ResponseEntity.ok(responseService);
+        boolean response = indexingService.startIndexing();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/stopIndexing")
     public ResponseEntity<Object> stopIndexing(){
-        ResponseService responseService = indexingService.stopIndexing();
-        if(!responseService.getResult()){
+        boolean response = indexingService.stopIndexing();
+        if(!response){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Индексация не запущена");
         }
-        return ResponseEntity.ok(responseService);
+        return ResponseEntity.ok(true);
     }
     @PostMapping("/indexPage")
     public ResponseEntity<Object> indexPage(@RequestParam String url){
-        ResponseService responseService = indexingService.indexPage(url);
-        if(!responseService.getResult()){
+        boolean response = indexingService.indexPage(url);
+        if(!response){
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
         }
-        return ResponseEntity.ok(responseService);
+        return ResponseEntity.ok(true);
     }
 
     @GetMapping("/search")
