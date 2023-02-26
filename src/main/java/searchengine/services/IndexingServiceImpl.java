@@ -48,9 +48,6 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public boolean stopIndexing() {
-        if (threadPoolExecutor.getActiveCount() == 0){
-            return false;
-        }
         threadPoolExecutor.shutdownNow();
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         for (SiteEntity siteEntity : siteEntityList) {
@@ -61,7 +58,8 @@ public class IndexingServiceImpl implements IndexingService {
                 siteRepository.save(siteEntity);
             }
         }
-        return true;
+        return threadPoolExecutor.getActiveCount() == 0;
+
     }
 
     @Override
@@ -84,6 +82,7 @@ public class IndexingServiceImpl implements IndexingService {
                     pageRepository, lemmaRepository, indexRepository, false);
             threadPoolExecutor.execute(siteIndexing);
             siteEntity.setUrl(site);
+            siteEntity.setStatus(StatusType.INDEXED);
             siteRepository.save(siteEntity);
             return true;
         }

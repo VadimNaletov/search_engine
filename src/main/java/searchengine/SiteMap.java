@@ -27,7 +27,8 @@ public class SiteMap {
     private List<String> siteMap;
 
     public void createSiteMap(){
-        try (ForkJoinPool pool = new ForkJoinPool()) {
+        try {
+            ForkJoinPool pool = new ForkJoinPool();
             String text = pool.invoke(new UrlParser(url, isInterrupted));
             siteMap = textToArray(text);
         } catch (Exception ex) {
