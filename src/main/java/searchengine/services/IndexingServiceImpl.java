@@ -1,11 +1,12 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
 import searchengine.SiteIndexing;
-import searchengine.config.Site;
-import searchengine.config.SitesList;
+import searchengine.dto.indexing.IndexingResponse;
 import searchengine.model.SiteEntity;
 import searchengine.model.StatusType;
 import searchengine.repositories.IndexRepository;
@@ -13,57 +14,81 @@ import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 
 @Service
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
 
+    private static final Logger logger = LogManager.getLogger(IndexingServiceImpl.class);
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-    private final SitesList sitesList;
+
 
     ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
-
     @Override
-    public boolean startIndexing() {
+    public IndexingResponse startIndexing() {
+        IndexingResponse indexingResponse = new IndexingResponse();
         boolean isIndexing;
-        List<SiteEntity> siteEntityList = getListFromConfig();
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
         for (SiteEntity siteEntity : siteEntityList){
             isIndexing = startSiteIndexing(siteEntity);
             if(!isIndexing){
-                return false;
+                indexingResponse.setResult(false);
+                indexingResponse.setError("Не удалось запустить индексацию");
+                return indexingResponse;
             }
         }
-        return true;
+        indexingResponse.setResult(true);
+        indexingResponse.setError("");
+        return indexingResponse;
     }
 
     @Override
-    public boolean stopIndexing() {
+    public IndexingResponse stopIndexing() {
+        IndexingResponse indexingResponse = new IndexingResponse();
+        if(threadPoolExecutor.getActiveCount() == 0){
+            indexingResponse.setResult(true);
+            indexingResponse.setError("Индексация не была запущена");
+            return indexingResponse;
+        }
         threadPoolExecutor.shutdownNow();
-        List<SiteEntity> siteEntityList = siteRepository.findAll();
-        for (SiteEntity siteEntity : siteEntityList) {
-            if(siteEntity.getStatus().equals(StatusType.INDEXING)) {
-                siteEntity.setStatus(StatusType.FAILED);
-                siteEntity.setStatusTime(new Date());
-                siteEntity.setLastError("Индексация была прервана");
-                siteRepository.save(siteEntity);
-            }
+        try{
+            threadPoolExecutor.awaitTermination(30, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            logger.error("ThreadPoolExecutor was not terminated: " + ex.getMessage());
         }
-        return threadPoolExecutor.getActiveCount() == 0;
+        if(threadPoolExecutor.isShutdown()){
+            List<SiteEntity> siteEntityList = siteRepository.findAll();
+            for (SiteEntity siteEntity : siteEntityList) {
+                if (siteEntity.getStatus().equals(StatusType.INDEXING)) {
+                    siteEntity.setStatus(StatusType.FAILED);
+                    siteEntity.setStatusTime(new Date());
+                    siteEntity.setLastError("Индексация была прервана");
+                    siteRepository.save(siteEntity);
+                }
+            }
+            indexingResponse.setResult(true);
+            indexingResponse.setError("Индексация прервана");
+        } else {
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Не удалось остановить индексацию");
+        }
+        return indexingResponse;
 
     }
 
     @Override
-    public boolean indexPage(String url){
+    public IndexingResponse indexPage(String url){
+        IndexingResponse indexingResponse = new IndexingResponse();
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         String site = "";
         StatusType status = null;
@@ -74,7 +99,8 @@ public class IndexingServiceImpl implements IndexingService {
             }
         }
         if(site.isBlank() || Objects.equals(status, StatusType.INDEXING)){
-            return false;
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Индексация уже запущена или ее никогда не запускали ранее");
         } else {
             SiteEntity siteEntity = siteRepository.findByUrl(site);
             siteEntity.setUrl(url);
@@ -84,30 +110,10 @@ public class IndexingServiceImpl implements IndexingService {
             siteEntity.setUrl(site);
             siteEntity.setStatus(StatusType.INDEXED);
             siteRepository.save(siteEntity);
-            return true;
+            indexingResponse.setError("");
+            indexingResponse.setResult(true);
         }
-    }
-    private List<SiteEntity> getListFromConfig(){
-        List<SiteEntity> siteEntityList = new ArrayList<>();
-        List<Site> siteList = sitesList.getSites();
-        for (Site site : siteList){
-            if (site.getUrl().contains("www.")){
-                site.setUrl(site.getUrl().replaceAll("www.", ""));
-            }
-            SiteEntity siteEntity;
-            if(siteRepository.findByUrl(site.getUrl()) != null) {
-                siteEntity = siteRepository.findByUrl(site.getUrl());
-            } else {
-                siteEntity = new SiteEntity();
-                siteEntity.setUrl(site.getUrl());
-                siteEntity.setName(site.getName());
-                siteEntity.setStatus(StatusType.FAILED);
-                siteEntity.setStatusTime(new Date());
-            }
-
-            siteEntityList.add(siteEntity);
-        }
-        return siteEntityList;
+        return indexingResponse;
     }
 
     private boolean startSiteIndexing(SiteEntity siteEntity){
@@ -119,7 +125,9 @@ public class IndexingServiceImpl implements IndexingService {
             SiteIndexing siteIndexing =
                     new SiteIndexing(siteEntity, siteRepository,
                             pageRepository, lemmaRepository, indexRepository, true);
+
             threadPoolExecutor.execute(siteIndexing);
+
             return true;
         } else {
             return false;

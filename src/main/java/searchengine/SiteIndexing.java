@@ -49,6 +49,9 @@ public class SiteIndexing extends Thread{
         siteMap.createSiteMap();
         List<String> urlList = siteMap.getSiteMap();
         for (String url : urlList){
+            if (Thread.currentThread().isInterrupted()) {
+                break;
+            }
             runOneSiteIndexing(url);
         }
     }
@@ -64,22 +67,23 @@ public class SiteIndexing extends Thread{
             Map<String, Integer> lemmas = lemmaFinder.collectLemmas(url);
             float lemmasSum = saveLemmasToDB(lemmas, siteEntity.getId());
             saveIndexToDB(lemmas, pageEntity.getId(), lemmasSum);
-        } catch (IOException e) {
-            siteEntity.setLastError("Ошибка чтения страницы: " + url);
-            siteEntity.setStatus(StatusType.FAILED);
-            logger.error("Error reading page: " + e.getMessage());
-        } catch (DataIntegrityViolationException e){
-            siteEntity.setLastError("Данные страницы " + url + " отсутствуют");
-            logger.error("Page's data is empty: " + e.getMessage());
-        } finally {
+            } catch (IOException e) {
+                siteEntity.setLastError("Ошибка чтения страницы: " + url);
+                siteEntity.setStatus(StatusType.FAILED);
+                logger.error("Error reading page: " + e.getMessage());
+                Thread.currentThread().interrupt();
+            } catch (DataIntegrityViolationException e){
+                siteEntity.setLastError("Данные страницы " + url + " отсутствуют");
+                logger.error("Page's data is empty: " + e.getMessage());
+                Thread.currentThread().interrupt();
+            } finally {
             siteRepository.save(siteEntity);
         }
-        synchronized (this) {
             createFrequency();
             siteEntity.setStatusTime(new Date());
             siteEntity.setStatus(StatusType.INDEXED);
             siteRepository.save(siteEntity);
-        }
+
     }
 
     private PageEntity getPage(String url, String rootUrl, long siteId) throws IOException{

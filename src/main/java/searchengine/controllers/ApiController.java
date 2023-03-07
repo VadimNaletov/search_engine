@@ -1,10 +1,10 @@
 package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.search.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
@@ -26,31 +26,34 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity<Object> startIndexing(){
-        boolean response = indexingService.startIndexing();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<IndexingResponse> startIndexing(){
+        IndexingResponse indexingResponse = indexingService.startIndexing();
+//        if(!indexingResponse.isResult()){
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(indexingResponse);
+//        }
+        return ResponseEntity.ok(indexingResponse);
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<Object> stopIndexing(){
-        boolean response = indexingService.stopIndexing();
-        if(!response){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Индексация не запущена");
-        }
-        return ResponseEntity.ok(true);
+    public ResponseEntity<IndexingResponse> stopIndexing(){
+        IndexingResponse indexingResponse = indexingService.stopIndexing();
+//        if(!indexingResponse.isResult()){
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(indexingResponse);
+//        }
+        return ResponseEntity.ok(indexingResponse);
     }
     @PostMapping("/indexPage")
-    public ResponseEntity<Object> indexPage(@RequestParam String url){
-        boolean response = indexingService.indexPage(url);
-        if(!response){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
-        }
-        return ResponseEntity.ok(true);
+    public ResponseEntity<IndexingResponse> indexPage(@RequestParam String url){
+        IndexingResponse indexingResponse = indexingService.indexPage(url);
+//        if(!indexingResponse.isResult()){
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+//                    .body(indexingResponse);
+//        }
+        return ResponseEntity.ok(indexingResponse);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<SearchResponse> search(String query, @Nullable String url, int offset, int limit){
+    public ResponseEntity<SearchResponse> search(@RequestParam String query, @Nullable String url, int offset, int limit){
         SearchResponse searchResponse = searchService.getSearchData(query, url, offset, limit);
         return ResponseEntity.ok(searchResponse);
     }

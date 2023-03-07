@@ -5,6 +5,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import searchengine.config.SitesList;
+import searchengine.dto.indexing.IndexingResponse;
 import searchengine.model.SiteEntity;
 import searchengine.model.StatusType;
 import searchengine.repositories.IndexRepository;
@@ -40,8 +41,8 @@ public class IndexingServiceImplTest {
 
     @Test
     void testStartIndexing() {
-        boolean result = indexingService.startIndexing();
-        assertTrue(result);
+        IndexingResponse result = indexingService.startIndexing();
+        assertTrue(result.isResult());
     }
 
     @Test
@@ -60,9 +61,9 @@ public class IndexingServiceImplTest {
         when(siteRepository.findAll()).thenReturn(siteEntityList);
         when(siteRepository.save(any(SiteEntity.class))).thenReturn(siteEntity1).thenReturn(siteEntity2);
 
-        boolean result = indexingService.stopIndexing();
+        IndexingResponse result = indexingService.stopIndexing();
 
-        assertTrue(result);
+        assertTrue(result.isResult());
         assertEquals(StatusType.FAILED, siteEntity1.getStatus());
         assertEquals(StatusType.INDEXED, siteEntity2.getStatus());
     }
@@ -83,9 +84,9 @@ public class IndexingServiceImplTest {
 
         String url = "http://example1.com/page1";
 
-        boolean result = indexingService.indexPage(url);
+        IndexingResponse result = indexingService.indexPage(url);
 
-        Assertions.assertTrue(result);
+        Assertions.assertTrue(result.isResult());
         Assertions.assertEquals(StatusType.INDEXED, siteEntity1.getStatus());
     }
 }
