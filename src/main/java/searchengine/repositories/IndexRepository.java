@@ -16,6 +16,4 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
     IndexEntity findIndexByLemmaId(long lemmaId);
     @Query(value = "SELECT * FROM search_engine.index_table where (:lemmaId IS NULL or lemma_id = :lemmaId)", nativeQuery = true)
     List<IndexEntity> getAllIndexesByLemmaId(long lemmaId);
-    @Query(value = "SELECT * FROM search_engine.index_table where (page_id = :pageId AND lemma_id = :lemmaId)", nativeQuery = true)
-    Optional<IndexEntity> findIndexByLemmaIdAndPageId(long pageId, long lemmaId);
 }

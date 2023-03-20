@@ -79,7 +79,6 @@ public class SiteIndexing extends Thread{
             } finally {
             siteRepository.save(siteEntity);
         }
-            createFrequency();
             siteEntity.setStatusTime(new Date());
             siteEntity.setStatus(StatusType.INDEXED);
             siteRepository.save(siteEntity);
@@ -122,11 +121,14 @@ public class SiteIndexing extends Thread{
         for(Map.Entry<String, Integer> lemma : lemmas.entrySet()){
             sum = sum + lemma.getValue();
             LemmaEntity lemmaEntity = lemmaRepository.findByLemma(lemma.getKey());
+            int frequency = 0;
             if(lemmaEntity == null){
                 lemmaEntity = new LemmaEntity();
+            } else {
+                frequency = lemmaEntity.getFrequency();
             }
             lemmaEntity.setLemma(lemma.getKey());
-            lemmaEntity.setFrequency(0);
+            lemmaEntity.setFrequency(frequency + 1);
             lemmaEntity.setSiteId(siteId);
             lemmaRepository.save(lemmaEntity);
         }
@@ -143,14 +145,6 @@ public class SiteIndexing extends Thread{
             indexEntity.setRank((lemma.getValue() / lemmasSum) * 100);
             indexEntity.setLemmaId(lemmaEntity.getId());
             indexRepository.save(indexEntity);
-        }
-    }
-    private void createFrequency(){
-        List<LemmaEntity> lemmaEntityList = lemmaRepository.findAll();
-        for(LemmaEntity lemmaEntity : lemmaEntityList){
-            int frequency = indexRepository.countFrequencyByLemmaId(lemmaEntity.getId());
-            lemmaEntity.setFrequency(frequency);
-            lemmaRepository.save(lemmaEntity);
         }
     }
 }
