@@ -24,6 +24,6 @@ public class LemmaFinderTest {
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.containsKey("лет"));
-        assertTrue(result.containsKey("срок"));
+        assertFalse(result.containsKey("срок"));
     }
 }

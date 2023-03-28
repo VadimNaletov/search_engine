@@ -17,6 +17,7 @@ import searchengine.services.IndexingServiceImpl;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -47,6 +48,7 @@ public class IndexingServiceImplTest {
 
     @Test
     void testStopIndexing() {
+
         SiteEntity siteEntity1 = new SiteEntity();
         siteEntity1.setUrl("http://www.example.com");
         siteEntity1.setStatus(StatusType.INDEXING);
@@ -70,7 +72,6 @@ public class IndexingServiceImplTest {
 
     @Test
     void testIndexPage() {
-
         List<SiteEntity> siteEntityList = new ArrayList<>();
         SiteEntity siteEntity1 = new SiteEntity();
         siteEntity1.setUrl("http://example1.com");

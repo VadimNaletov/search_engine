@@ -56,7 +56,15 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public IndexingResponse stopIndexing() {
         IndexingResponse indexingResponse = new IndexingResponse();
-        if(threadPoolExecutor.getActiveCount() == 0){
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
+        boolean isIndexing = false;
+        for(SiteEntity siteEntity : siteEntityList){
+            if (siteEntity.getStatus().equals(StatusType.INDEXING)) {
+                isIndexing = true;
+                break;
+            }
+        }
+        if(threadPoolExecutor.getActiveCount() == 0 && !isIndexing){
             indexingResponse.setResult(true);
             indexingResponse.setError("Индексация не была запущена");
             return indexingResponse;
@@ -68,7 +76,7 @@ public class IndexingServiceImpl implements IndexingService {
             logger.error("ThreadPoolExecutor was not terminated: " + ex.getMessage());
         }
         if(threadPoolExecutor.isShutdown()){
-            List<SiteEntity> siteEntityList = siteRepository.findAll();
+//            List<SiteEntity> siteEntityList = siteRepository.findAll();
             for (SiteEntity siteEntity : siteEntityList) {
                 if (siteEntity.getStatus().equals(StatusType.INDEXING)) {
                     siteEntity.setStatus(StatusType.FAILED);
