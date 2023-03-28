@@ -33,7 +33,8 @@ public class IndexingServiceImpl implements IndexingService {
     private final IndexRepository indexRepository;
 
 
-    ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+    ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor)
+            Executors.newFixedThreadPool(2);
     @Override
     public IndexingResponse startIndexing() {
         IndexingResponse indexingResponse = new IndexingResponse();
@@ -41,12 +42,12 @@ public class IndexingServiceImpl implements IndexingService {
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         for (SiteEntity siteEntity : siteEntityList){
             isIndexing = startSiteIndexing(siteEntity);
-            if(!isIndexing){
+            if (!isIndexing) {
                 indexingResponse.setResult(false);
                 indexingResponse.setError("Не удалось запустить индексацию");
                 return indexingResponse;
+                }
             }
-        }
         indexingResponse.setResult(true);
         indexingResponse.setError("");
         return indexingResponse;
@@ -118,16 +119,15 @@ public class IndexingServiceImpl implements IndexingService {
 
     private boolean startSiteIndexing(SiteEntity siteEntity){
         SiteEntity checkSiteEntity = siteRepository.findByUrl(siteEntity.getUrl());
-        if (checkSiteEntity == null){
+        if (checkSiteEntity == null) {
             siteRepository.save(siteEntity);
         }
-        if (!siteEntity.getStatus().equals(StatusType.INDEXING)){
+        if (!siteEntity.getStatus().equals(StatusType.INDEXING)) {
             SiteIndexing siteIndexing =
                     new SiteIndexing(siteEntity, siteRepository,
                             pageRepository, lemmaRepository, indexRepository, true);
 
             threadPoolExecutor.execute(siteIndexing);
-
             return true;
         } else {
             return false;

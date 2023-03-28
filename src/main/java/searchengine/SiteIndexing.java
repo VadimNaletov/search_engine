@@ -78,11 +78,11 @@ public class SiteIndexing extends Thread{
                 Thread.currentThread().interrupt();
             } finally {
             siteRepository.save(siteEntity);
-        }
+        } synchronized (this) {
             siteEntity.setStatusTime(new Date());
             siteEntity.setStatus(StatusType.INDEXED);
             siteRepository.save(siteEntity);
-
+        }
     }
 
     private PageEntity getPage(String url, String rootUrl, long siteId) throws IOException{

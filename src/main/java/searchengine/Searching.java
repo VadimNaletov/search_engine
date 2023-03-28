@@ -34,6 +34,7 @@ public class Searching {
     private final LemmaRepository lemmaRepository;
     private final PageRepository pageRepository;
     private final SiteRepository siteRepository;
+
     SearchData searchData = new SearchData();
     List<DetailedSearchData> detailedSearchDataList = new ArrayList<>();
 
@@ -47,7 +48,6 @@ public class Searching {
             SiteEntity siteEntity = siteRepository.findByUrl(url);
             siteList = new ArrayList<>(Collections.singletonList(siteEntity));
         }
-
         for (SiteEntity siteEntity : siteList){
             fillInDetailedSearchDataList(query, siteEntity.getId());
         }
@@ -67,17 +67,32 @@ public class Searching {
         if(requiredLemmas.isEmpty()){
             return relevantPages;
         }
-            List<IndexEntity> indexEntityList =
+        List<IndexEntity> indexEntityList =
                     indexRepository.getAllIndexesByLemmaId(requiredLemmas.get(0).getId());
-        for (IndexEntity indexEntity : indexEntityList){
-            PageEntity pageEntity = pageRepository.findById(indexEntity.getPageId()).orElse(null);
-            float relevance = 0;
+        Set<Long> pageIds = new HashSet<>();
+        for (IndexEntity indexEntity : indexEntityList) {
+            pageIds.add(indexEntity.getPageId());
+        }
+        for(int i = 1; i < requiredLemmas.size(); i++){
+            List<IndexEntity> indexes = indexRepository.getAllIndexesByLemmaId(requiredLemmas.get(i).getId());
+            Set<Long> newPageIds = new HashSet<>();
+            for(IndexEntity indexEntity : indexes){
+                if(pageIds.contains(indexEntity.getPageId())){
+                    newPageIds.add(indexEntity.getPageId());
+                }
+            }
+            pageIds = newPageIds;
+        }
+
+        for(Long pageId : pageIds){
+            PageEntity pageEntity = pageRepository.findById(pageId).orElse(null);
+            float absoluteRelevance = 0;
             for (LemmaEntity lemmaEntity : requiredLemmas) {
-                relevance += indexRepository.countFrequencyByLemmaId(lemmaEntity.getId());
+                absoluteRelevance += indexRepository.countAbsoluteRelevance(pageEntity.getId(), lemmaEntity.getId());
             }
-                relevantPages.put(pageEntity, relevance);
-            }
-            return relevantPages;
+            relevantPages.put(pageEntity, absoluteRelevance);
+        }
+        return relevantPages;
     }
     private List<LemmaEntity> getSortedLemmas(String query, long siteId){
         List<LemmaEntity> lemmaEntityList = new ArrayList<>();
@@ -85,7 +100,9 @@ public class Searching {
         for(String lemma : requiredLemmas){
             List<LemmaEntity> lemmas = lemmaRepository.getLemmasList(lemma);
             for(LemmaEntity lemmaEntity : lemmas){
-                if(lemmaEntity.getSiteId() == siteId) lemmaEntityList.add(lemmaEntity);
+                if(lemmaEntity.getSiteId() == siteId && lemmaEntity.getFrequency() <= 100) {
+                    lemmaEntityList.add(lemmaEntity);
+                }
             }
         }
         lemmaEntityList.sort(Comparator.comparingInt(LemmaEntity::getFrequency));
@@ -176,10 +193,28 @@ public class Searching {
         return result;
     }
     private void fillInDetailedSearchDataList(String query, long siteId){
-        Map<PageEntity, Float> relevantData = getRelevantData(query, siteId);
+        Map<PageEntity, Float> relevantData = getRelativeRelevance(query, siteId);
         for (Map.Entry<PageEntity, Float> data : relevantData.entrySet()){
             DetailedSearchData detailedSearchData = getDetailedSearchData(data, query);
             detailedSearchDataList.add(detailedSearchData);
         }
     }
+
+    private Map<PageEntity, Float> getRelativeRelevance(String query, long siteId){
+        Map<PageEntity, Float> relevantPages = getRelevantData(query, siteId);
+        float maxAbsoluteRelevance = 0F;
+
+        if (!relevantPages.isEmpty()) {
+            maxAbsoluteRelevance = Collections.max(relevantPages.values());
+        }
+        Map<PageEntity, Float> relativeRelevance = new HashMap<>();
+        for (Map.Entry<PageEntity, Float> entry : relevantPages.entrySet()) {
+            float absoluteRelevance = entry.getValue();
+            float relative = maxAbsoluteRelevance > 0 ? absoluteRelevance / maxAbsoluteRelevance : 0;
+            relativeRelevance.put(entry.getKey(), relative);
+        }
+        return relativeRelevance;
+    }
 }
+
+

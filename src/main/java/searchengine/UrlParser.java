@@ -62,7 +62,7 @@ public class UrlParser extends RecursiveTask<String> {
                 }
             }
         } catch (RuntimeException | IOException | InterruptedException ex){
-            logger.error("Error while processing URL: " + url, ex);
+            logger.error("Error while processing URL: " + url + ex.getMessage());
         }
         return result.toString();
     }

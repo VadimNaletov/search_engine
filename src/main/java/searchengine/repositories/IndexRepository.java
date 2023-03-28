@@ -6,14 +6,13 @@ import org.springframework.stereotype.Repository;
 import searchengine.model.IndexEntity;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
-    @Query(value = "SELECT COUNT(page_id) FROM search_engine.index_table where lemma_id = :lemmaId", nativeQuery = true)
-    int countFrequencyByLemmaId(long lemmaId);
     @Query(value = "SELECT * FROM search_engine.index_table where (:lemmaId IS NULL or lemma_id = :lemmaId) limit 1", nativeQuery = true)
     IndexEntity findIndexByLemmaId(long lemmaId);
     @Query(value = "SELECT * FROM search_engine.index_table where (:lemmaId IS NULL or lemma_id = :lemmaId)", nativeQuery = true)
     List<IndexEntity> getAllIndexesByLemmaId(long lemmaId);
+    @Query(value = "SELECT SUM(e.rank_number) FROM search_engine.index_table e WHERE e.page_id = :pageId AND e.lemma_id = :lemmaId", nativeQuery = true)
+    Float countAbsoluteRelevance(long pageId, long lemmaId);
 }
