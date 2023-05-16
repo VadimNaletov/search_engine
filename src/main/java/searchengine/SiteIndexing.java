@@ -3,6 +3,7 @@ package searchengine;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
@@ -22,6 +23,9 @@ import org.apache.logging.log4j.Logger;
 public class SiteIndexing extends Thread{
 
     private static final Logger logger = LogManager.getLogger(SiteIndexing.class);
+
+    @Value("${userAgent}")
+    private String userAgent;
 
     private final SiteEntity siteEntity;
     private final SiteRepository siteRepository;
@@ -88,12 +92,8 @@ public class SiteIndexing extends Thread{
     private PageEntity getPage(String url, String rootUrl, long siteId) throws IOException{
         PageEntity pageEntity = new PageEntity();
         try {
-            Connection.Response response = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                    .referrer("http://www.google.com")
-                    .timeout(5000)
-                    .maxBodySize(0)
-                    .execute();
+            Connection.Response response = Jsoup.connect(url).userAgent(userAgent).referrer("http://www.google.com")
+                    .timeout(5000).maxBodySize(0).execute();
             String content = response.body();
             if (url.contains("www.")){
                 url = url.replaceAll("www.", "");

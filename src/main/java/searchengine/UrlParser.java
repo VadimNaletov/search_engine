@@ -12,11 +12,15 @@ import java.util.Vector;
 import java.util.concurrent.RecursiveTask;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 
 
 public class UrlParser extends RecursiveTask<String> {
 
     private static final Logger logger = LogManager.getLogger(UrlParser.class);
+
+    @Value("${userAgent}")
+    private String userAgent;
 
     public UrlParser(String url, boolean isInterrupted) {
         this.url = url;
@@ -35,10 +39,8 @@ public class UrlParser extends RecursiveTask<String> {
         result.append(url);
         try {
             Thread.sleep(200);
-            Document document = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                    .referrer("http://www.google.com")
-                    .maxBodySize(0).get();
+            Document document = Jsoup.connect(url).userAgent(userAgent)
+                    .referrer("http://www.google.com").maxBodySize(0).get();
             Elements elements = document.select("a");
             List<UrlParser> executedLinks = new ArrayList<>();
             for (Element element : elements){

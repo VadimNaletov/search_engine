@@ -16,10 +16,13 @@ import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 
 public class LemmaFinder {
 
     private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
+    @Value("${userAgent}")
+    private String userAgent;
 
     private final LuceneMorphology luceneMorphology;
     private static final String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
@@ -78,12 +81,8 @@ public class LemmaFinder {
     public String htmlToText(String url) {
         Connection.Response body = null;
         try {
-            body = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                    .referrer("http://www.google.com")
-                    .timeout(5000)
-                    .maxBodySize(0)
-                    .execute();
+            body = Jsoup.connect(url).userAgent(userAgent).referrer("http://www.google.com").timeout(5000)
+                    .maxBodySize(0).execute();
         } catch (Exception ex) {
             logger.error("Could not connect to: " + url + " - " + ex.getMessage());
         }
